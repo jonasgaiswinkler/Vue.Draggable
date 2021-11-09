@@ -423,6 +423,48 @@ describe('draggable.vue with multidrag plugin', () => {
       });
     });
 
+    describe.only('when selecting items, but dragging a non-selected item', () => {
+      /** @type {HTMLElement[]} */
+      let newElements;
+
+      beforeEach(async () => {
+        const newItems = ['x', 'y'];
+        newElements = newItems.map((item) => {
+          const element = document.createElement('div');
+          element.appendChild(document.createTextNode(item));
+          return element;
+        });
+        const newElement = newElements[0];
+        // after selecting items, but then dragging a non-selected item, items is an empty array
+        const eventItems = []
+        newElement._underlying_vm_ = newItems[0];
+
+        // drop after last item
+        const addEvent = {
+          newIndex: 5,
+          newDraggableIndex: 5,
+          item: newElement,
+          items: eventItems
+        };
+        onAdd(addEvent);
+        await Vue.nextTick();
+      });
+
+      it('should added', () => {
+        expect(vm.list).toEqual(['a', 'b', 'c', 'd', 'x']);
+      });
+
+      it('should send events', () => {
+        const expectedEvents = {
+          added: { element: 'x', newIndex: 4 },
+        };
+        const { add: addEmit, change: changeEmit } = wrapper.emitted();
+        expect(addEmit).toHaveLength(1);
+        expect(changeEmit).toHaveLength(1);
+        expect(changeEmit).toEqual([[expectedEvents]]);
+      });
+    });
+
     describe('when drop from other (add)', () => {
       /** @type {HTMLElement[]} */
       let newElements;

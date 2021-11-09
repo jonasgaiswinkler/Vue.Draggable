@@ -472,7 +472,7 @@ const draggableComponent = {
     },
 
     onDragStart(evt) {
-      if (evt.items) {
+      if (Array.isArray(evt.items) && evt.items.length) {
         this.multidragContexts = evt.items.map(e => this.getUnderlyingVm(e));
         const elements = this.multidragContexts
           .sort(({ index: a }, { index: b }) => a - b)
@@ -485,7 +485,7 @@ const draggableComponent = {
     },
 
     onDragAdd(evt) {
-      if (evt.items) {
+      if (Array.isArray(evt.items) && evt.items.length) {
         this.onDragAddMulti(evt);
       } else {
         this.onDragAddSingle(evt);
