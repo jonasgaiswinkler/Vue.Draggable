@@ -423,7 +423,7 @@ describe('draggable.vue with multidrag plugin', () => {
       });
     });
 
-    describe.only('when selecting items, but dragging a non-selected item', () => {
+    describe('when selecting items, but dragging a non-selected item', () => {
       /** @type {HTMLElement[]} */
       let newElements;
 

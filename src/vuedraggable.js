@@ -525,7 +525,7 @@ const draggableComponent = {
     },
 
     onDragRemove(evt) {
-      if (evt.items) {
+      if (Array.isArray(evt.items) && evt.items.length) {
         this.onDragRemoveMulti(evt);
       } else {
         this.onDragRemoveSingle(evt);
@@ -577,8 +577,8 @@ const draggableComponent = {
     },
 
     onDragUpdate(evt) {
-      if (evt.items) {
-        this.onDragUpdateMulti(evt);
+      if (Array.isArray(evt.items) && evt.items.length) {
+        if (!evt.pullMode) this.onDragUpdateMulti(evt);
       } else {
         this.onDragUpdateSingle(evt);
       }
