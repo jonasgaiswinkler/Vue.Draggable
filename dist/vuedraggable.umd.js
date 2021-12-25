@@ -213,6 +213,57 @@ module.exports = function (S, index, unicode) {
 
 /***/ }),
 
+/***/ "0a49":
+/***/ (function(module, exports, __webpack_require__) {
+
+// 0 -> Array#forEach
+// 1 -> Array#map
+// 2 -> Array#filter
+// 3 -> Array#some
+// 4 -> Array#every
+// 5 -> Array#find
+// 6 -> Array#findIndex
+var ctx = __webpack_require__("9b43");
+var IObject = __webpack_require__("626a");
+var toObject = __webpack_require__("4bf8");
+var toLength = __webpack_require__("9def");
+var asc = __webpack_require__("cd1c");
+module.exports = function (TYPE, $create) {
+  var IS_MAP = TYPE == 1;
+  var IS_FILTER = TYPE == 2;
+  var IS_SOME = TYPE == 3;
+  var IS_EVERY = TYPE == 4;
+  var IS_FIND_INDEX = TYPE == 6;
+  var NO_HOLES = TYPE == 5 || IS_FIND_INDEX;
+  var create = $create || asc;
+  return function ($this, callbackfn, that) {
+    var O = toObject($this);
+    var self = IObject(O);
+    var f = ctx(callbackfn, that, 3);
+    var length = toLength(self.length);
+    var index = 0;
+    var result = IS_MAP ? create($this, length) : IS_FILTER ? create($this, 0) : undefined;
+    var val, res;
+    for (;length > index; index++) if (NO_HOLES || index in self) {
+      val = self[index];
+      res = f(val, index, O);
+      if (TYPE) {
+        if (IS_MAP) result[index] = res;   // map
+        else if (res) switch (TYPE) {
+          case 3: return true;             // some
+          case 5: return val;              // find
+          case 6: return index;            // findIndex
+          case 2: result.push(val);        // filter
+        } else if (IS_EVERY) return false; // every
+      }
+    }
+    return IS_FIND_INDEX ? -1 : IS_SOME || IS_EVERY ? IS_EVERY : result;
+  };
+};
+
+
+/***/ }),
+
 /***/ "0bfb":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -248,6 +299,18 @@ module.exports = Object.keys || function keys(O) {
 
 /***/ }),
 
+/***/ "1169":
+/***/ (function(module, exports, __webpack_require__) {
+
+// 7.2.2 IsArray(argument)
+var cof = __webpack_require__("2d95");
+module.exports = Array.isArray || function isArray(arg) {
+  return cof(arg) == 'Array';
+};
+
+
+/***/ }),
+
 /***/ "1495":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -263,6 +326,70 @@ module.exports = __webpack_require__("9e1e") ? Object.defineProperties : functio
   var P;
   while (length > i) dP.f(O, P = keys[i++], Properties[P]);
   return O;
+};
+
+
+/***/ }),
+
+/***/ "1c4c":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var ctx = __webpack_require__("9b43");
+var $export = __webpack_require__("5ca1");
+var toObject = __webpack_require__("4bf8");
+var call = __webpack_require__("1fa8");
+var isArrayIter = __webpack_require__("33a4");
+var toLength = __webpack_require__("9def");
+var createProperty = __webpack_require__("f1ae");
+var getIterFn = __webpack_require__("27ee");
+
+$export($export.S + $export.F * !__webpack_require__("5cc5")(function (iter) { Array.from(iter); }), 'Array', {
+  // 22.1.2.1 Array.from(arrayLike, mapfn = undefined, thisArg = undefined)
+  from: function from(arrayLike /* , mapfn = undefined, thisArg = undefined */) {
+    var O = toObject(arrayLike);
+    var C = typeof this == 'function' ? this : Array;
+    var aLen = arguments.length;
+    var mapfn = aLen > 1 ? arguments[1] : undefined;
+    var mapping = mapfn !== undefined;
+    var index = 0;
+    var iterFn = getIterFn(O);
+    var length, result, step, iterator;
+    if (mapping) mapfn = ctx(mapfn, aLen > 2 ? arguments[2] : undefined, 2);
+    // if object isn't iterable or it's array with default iterator - use simple case
+    if (iterFn != undefined && !(C == Array && isArrayIter(iterFn))) {
+      for (iterator = iterFn.call(O), result = new C(); !(step = iterator.next()).done; index++) {
+        createProperty(result, index, mapping ? call(iterator, mapfn, [step.value, index], true) : step.value);
+      }
+    } else {
+      length = toLength(O.length);
+      for (result = new C(length); length > index; index++) {
+        createProperty(result, index, mapping ? mapfn(O[index], index) : O[index]);
+      }
+    }
+    result.length = index;
+    return result;
+  }
+});
+
+
+/***/ }),
+
+/***/ "1fa8":
+/***/ (function(module, exports, __webpack_require__) {
+
+// call something on iterator step with safe closing on error
+var anObject = __webpack_require__("cb7c");
+module.exports = function (iterator, fn, value, entries) {
+  try {
+    return entries ? fn(anObject(value)[0], value[1]) : fn(value);
+  // 7.4.6 IteratorClose(iterator, completion)
+  } catch (e) {
+    var ret = iterator['return'];
+    if (ret !== undefined) anObject(ret.call(iterator));
+    throw e;
+  }
 };
 
 
@@ -424,6 +551,21 @@ exports.f = Object.getOwnPropertySymbols;
 
 /***/ }),
 
+/***/ "27ee":
+/***/ (function(module, exports, __webpack_require__) {
+
+var classof = __webpack_require__("23c6");
+var ITERATOR = __webpack_require__("2b4c")('iterator');
+var Iterators = __webpack_require__("84f2");
+module.exports = __webpack_require__("8378").getIteratorMethod = function (it) {
+  if (it != undefined) return it[ITERATOR]
+    || it['@@iterator']
+    || Iterators[classof(it)];
+};
+
+
+/***/ }),
+
 /***/ "2aba":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -548,6 +690,23 @@ module.exports = function (it) {
 
 /***/ }),
 
+/***/ "2f21":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var fails = __webpack_require__("79e5");
+
+module.exports = function (method, arg) {
+  return !!method && fails(function () {
+    // eslint-disable-next-line no-useless-call
+    arg ? method.call(null, function () { /* empty */ }, 1) : method.call(null);
+  });
+};
+
+
+/***/ }),
+
 /***/ "2fdb":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -578,6 +737,21 @@ module.exports = __webpack_require__("9e1e") ? function (object, key, value) {
 } : function (object, key, value) {
   object[key] = value;
   return object;
+};
+
+
+/***/ }),
+
+/***/ "33a4":
+/***/ (function(module, exports, __webpack_require__) {
+
+// check on default Array iterator
+var Iterators = __webpack_require__("84f2");
+var ITERATOR = __webpack_require__("2b4c")('iterator');
+var ArrayProto = Array.prototype;
+
+module.exports = function (it) {
+  return it !== undefined && (Iterators.Array === it || ArrayProto[ITERATOR] === it);
 };
 
 
@@ -792,6 +966,37 @@ var store = global[SHARED] || (global[SHARED] = {});
 
 /***/ }),
 
+/***/ "55dd":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $export = __webpack_require__("5ca1");
+var aFunction = __webpack_require__("d8e8");
+var toObject = __webpack_require__("4bf8");
+var fails = __webpack_require__("79e5");
+var $sort = [].sort;
+var test = [1, 2, 3];
+
+$export($export.P + $export.F * (fails(function () {
+  // IE8-
+  test.sort(undefined);
+}) || !fails(function () {
+  // V8 bug
+  test.sort(null);
+  // Old WebKit
+}) || !__webpack_require__("2f21")($sort)), 'Array', {
+  // 22.1.3.25 Array.prototype.sort(comparefn)
+  sort: function sort(comparefn) {
+    return comparefn === undefined
+      ? $sort.call(toObject(this))
+      : $sort.call(toObject(this), aFunction(comparefn));
+  }
+});
+
+
+/***/ }),
+
 /***/ "5ca1":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -838,6 +1043,60 @@ $export.W = 32;  // wrap
 $export.U = 64;  // safe
 $export.R = 128; // real proto method for `library`
 module.exports = $export;
+
+
+/***/ }),
+
+/***/ "5cc5":
+/***/ (function(module, exports, __webpack_require__) {
+
+var ITERATOR = __webpack_require__("2b4c")('iterator');
+var SAFE_CLOSING = false;
+
+try {
+  var riter = [7][ITERATOR]();
+  riter['return'] = function () { SAFE_CLOSING = true; };
+  // eslint-disable-next-line no-throw-literal
+  Array.from(riter, function () { throw 2; });
+} catch (e) { /* empty */ }
+
+module.exports = function (exec, skipClosing) {
+  if (!skipClosing && !SAFE_CLOSING) return false;
+  var safe = false;
+  try {
+    var arr = [7];
+    var iter = arr[ITERATOR]();
+    iter.next = function () { return { done: safe = true }; };
+    arr[ITERATOR] = function () { return iter; };
+    exec(arr);
+  } catch (e) { /* empty */ }
+  return safe;
+};
+
+
+/***/ }),
+
+/***/ "5df3":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $at = __webpack_require__("02f4")(true);
+
+// 21.1.3.27 String.prototype[@@iterator]()
+__webpack_require__("01f9")(String, 'String', function (iterated) {
+  this._t = String(iterated); // target
+  this._i = 0;                // next index
+// 21.1.5.2.1 %StringIteratorPrototype%.next()
+}, function () {
+  var O = this._t;
+  var index = this._i;
+  var point;
+  if (index >= O.length) return { value: undefined, done: true };
+  point = $at(O, index);
+  this._i += point.length;
+  return { value: point, done: false };
+});
 
 
 /***/ }),
@@ -1014,6 +1273,28 @@ module.exports = !$assign || __webpack_require__("79e5")(function () {
     while (length > j) if (isEnum.call(S, key = keys[j++])) T[key] = S[key];
   } return T;
 } : $assign;
+
+
+/***/ }),
+
+/***/ "7514":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+// 22.1.3.8 Array.prototype.find(predicate, thisArg = undefined)
+var $export = __webpack_require__("5ca1");
+var $find = __webpack_require__("0a49")(5);
+var KEY = 'find';
+var forced = true;
+// Shouldn't skip holes
+if (KEY in []) Array(1)[KEY](function () { forced = false; });
+$export($export.P + $export.F * forced, 'Array', {
+  find: function find(callbackfn /* , that = undefined */) {
+    return $find(this, callbackfn, arguments.length > 1 ? arguments[1] : undefined);
+  }
+});
+__webpack_require__("9c6c")(KEY);
 
 
 /***/ }),
@@ -1606,6 +1887,19 @@ module.exports = function (it) {
 
 /***/ }),
 
+/***/ "cd1c":
+/***/ (function(module, exports, __webpack_require__) {
+
+// 9.4.2.3 ArraySpeciesCreate(originalArray, length)
+var speciesConstructor = __webpack_require__("e853");
+
+module.exports = function (original, length) {
+  return new (speciesConstructor(original))(length);
+};
+
+
+/***/ }),
+
 /***/ "ce10":
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1683,6 +1977,45 @@ module.exports = function (it) {
 module.exports = (
   'constructor,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'
 ).split(',');
+
+
+/***/ }),
+
+/***/ "e853":
+/***/ (function(module, exports, __webpack_require__) {
+
+var isObject = __webpack_require__("d3f4");
+var isArray = __webpack_require__("1169");
+var SPECIES = __webpack_require__("2b4c")('species');
+
+module.exports = function (original) {
+  var C;
+  if (isArray(original)) {
+    C = original.constructor;
+    // cross-realm fallback
+    if (typeof C == 'function' && (C === Array || isArray(C.prototype))) C = undefined;
+    if (isObject(C)) {
+      C = C[SPECIES];
+      if (C === null) C = undefined;
+    }
+  } return C === undefined ? Array : C;
+};
+
+
+/***/ }),
+
+/***/ "f1ae":
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var $defineProperty = __webpack_require__("86cc");
+var createDesc = __webpack_require__("4630");
+
+module.exports = function (object, index, value) {
+  if (index in object) $defineProperty.f(object, index, createDesc(0, value));
+  else object[index] = value;
+};
 
 
 /***/ }),
@@ -1808,6 +2141,18 @@ if (typeof window !== 'undefined') {
 // Indicate to webpack that this file can be concatenated
 /* harmony default export */ var setPublicPath = (null);
 
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es6.array.find.js
+var es6_array_find = __webpack_require__("7514");
+
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es6.array.sort.js
+var es6_array_sort = __webpack_require__("55dd");
+
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es6.string.iterator.js
+var es6_string_iterator = __webpack_require__("5df3");
+
+// EXTERNAL MODULE: ./node_modules/core-js/modules/es6.array.from.js
+var es6_array_from = __webpack_require__("1c4c");
+
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es6.object.assign.js
 var es6_object_assign = __webpack_require__("f751");
 
@@ -1932,6 +2277,26 @@ var helper = __webpack_require__("c649");
 
 
 
+
+
+
+
+
+function createSortableInstance(rootContainer, options) {
+  var sortable = new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a(rootContainer, options); // check multidrag plugin loaded
+  // - cjs ("sortable.js") and complete esm ("sortable.complete.esm") mount MultiDrag automatically.
+  // - default esm ("sortable.esm") does not mount MultiDrag automatically.
+
+  if (options.multiDrag && !sortable.multiDrag) {
+    // mount plugin if not mounted
+    external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a.mount(new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_["MultiDrag"]()); // destroy and recreate sortable.js instance
+
+    sortable.destroy();
+    return createSortableInstance(rootContainer, options);
+  } else {
+    return sortable;
+  }
+}
 
 function buildAttribute(object, propName, value) {
   if (value === undefined) {
@@ -2063,8 +2428,15 @@ function getComponentAttributes($attrs, componentData) {
   return attributes;
 }
 
+function getIndiciesToRemove(items, offset) {
+  return Array.from(items).reverse().map(function (_ref) {
+    var index = _ref.index;
+    return index - offset;
+  });
+}
+
 var eventsListened = ["Start", "Add", "Remove", "Update", "End"];
-var eventsToEmit = ["Choose", "Unchoose", "Sort", "Filter", "Clone"];
+var eventsToEmit = ["Choose", "Unchoose", "Sort", "Filter", "Clone", "Select", "Deselect"];
 var readonlyProperties = ["Move"].concat(eventsListened, eventsToEmit).map(function (evt) {
   return "on" + evt;
 });
@@ -2105,6 +2477,22 @@ var props = {
   },
   componentData: {
     type: Object,
+    required: false,
+    default: null
+  },
+  // plugin: multidrag
+  multiDrag: {
+    type: Boolean,
+    required: false,
+    default: false
+  },
+  multiDragKey: {
+    type: String,
+    required: false,
+    default: null
+  },
+  selectedClass: {
+    type: String,
     required: false,
     default: null
   }
@@ -2166,13 +2554,23 @@ var draggableComponent = {
       res[Object(helper["a" /* camelize */])(key)] = _this3.$attrs[key];
       return res;
     }, {});
+
+    if (this.multiDrag) {
+      optionsAdded.multiDrag = this.multiDrag;
+      ["selectedClass", "multiDragKey"].filter(function (key) {
+        return _this3[key];
+      }).forEach(function (key) {
+        return optionsAdded[key] = _this3[key];
+      });
+    }
+
     var options = Object.assign({}, this.options, attributes, optionsAdded, {
       onMove: function onMove(evt, originalEvent) {
         return _this3.onDragMove(evt, originalEvent);
       }
     });
     !("draggable" in options) && (options.draggable = ">*");
-    this._sortable = new external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a(this.rootContainer, options);
+    this._sortable = createSortableInstance(this.rootContainer, options);
     this.computeIndexes();
   },
   beforeDestroy: function beforeDestroy() {
@@ -2250,8 +2648,8 @@ var draggableComponent = {
         element: element
       };
     },
-    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(_ref) {
-      var vue = _ref.__vue__;
+    getUnderlyingPotencialDraggableComponent: function getUnderlyingPotencialDraggableComponent(_ref2) {
+      var vue = _ref2.__vue__;
 
       if (!vue || !vue.$options || !isTransitionName(vue.$options._componentTag)) {
         if (!("realList" in vue) && vue.$children.length === 1 && "realList" in vue.$children[0]) return vue.$children[0];
@@ -2287,6 +2685,15 @@ var draggableComponent = {
 
       this.alterList(spliceList);
     },
+    removeAllFromList: function removeAllFromList(indicies) {
+      var spliceList = function spliceList(list) {
+        return indicies.forEach(function (index) {
+          return list.splice(index, 1);
+        });
+      };
+
+      this.alterList(spliceList);
+    },
     updatePosition: function updatePosition(oldIndex, newIndex) {
       var updatePosition = function updatePosition(list) {
         return list.splice(newIndex, 0, list.splice(oldIndex, 1)[0]);
@@ -2294,9 +2701,27 @@ var draggableComponent = {
 
       this.alterList(updatePosition);
     },
-    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref2) {
-      var to = _ref2.to,
-          related = _ref2.related;
+
+    /**
+     * @param {number[]} oldIndicies
+     * @param {number} newIndex
+     */
+    updatePositions: function updatePositions(oldIndicies, newIndex) {
+      /** @type {<T = any>(list: T[]) => T[]} */
+      var updatePosition = function updatePosition(list) {
+        // get selected items with correct order
+        // sort -> reverse (for prevent Array.splice side effect) -> splice -> reverse
+        var items = oldIndicies.sort().reverse().flatMap(function (oldIndex) {
+          return list.splice(oldIndex, 1);
+        }).reverse();
+        return list.splice.apply(list, [newIndex, 0].concat(_toConsumableArray(items)));
+      };
+
+      this.alterList(updatePosition);
+    },
+    getRelatedContextFromMoveEvent: function getRelatedContextFromMoveEvent(_ref3) {
+      var to = _ref3.to,
+          related = _ref3.related;
       var component = this.getUnderlyingPotencialDraggableComponent(to);
 
       if (!component) {
@@ -2341,11 +2766,60 @@ var draggableComponent = {
       transitionContainer.kept = undefined;
     },
     onDragStart: function onDragStart(evt) {
+      var _this6 = this;
+
+      if (Array.isArray(evt.items) && evt.items.length) {
+        this.multidragContexts = evt.items.map(function (e) {
+          return _this6.getUnderlyingVm(e);
+        });
+        var elements = this.multidragContexts.sort(function (_ref4, _ref5) {
+          var a = _ref4.index;
+          var b = _ref5.index;
+          return a - b;
+        }).map(function (e) {
+          return e.element;
+        });
+        evt.item._underlying_vm_multidrag_ = this.clone(elements);
+      }
+
       this.context = this.getUnderlyingVm(evt.item);
       evt.item._underlying_vm_ = this.clone(this.context.element);
       draggingElement = evt.item;
     },
     onDragAdd: function onDragAdd(evt) {
+      if (Array.isArray(evt.items) && evt.items.length) {
+        this.onDragAddMulti(evt);
+      } else {
+        this.onDragAddSingle(evt);
+      }
+    },
+    onDragAddMulti: function onDragAddMulti(evt) {
+      var elements = evt.item._underlying_vm_multidrag_;
+
+      if (elements === undefined) {
+        return;
+      } // remove nodes
+
+
+      evt.items.forEach(function (e) {
+        return Object(helper["d" /* removeNode */])(e);
+      }); // insert elements
+
+      var newIndex = this.getVmIndex(evt.newIndex);
+      this.spliceList.apply(this, [newIndex, 0].concat(_toConsumableArray(elements)));
+      this.computeIndexes(); // emit change
+
+      var added = elements.map(function (element, index) {
+        return {
+          element: element,
+          newIndex: newIndex + index
+        };
+      });
+      this.emitChanges({
+        added: added
+      });
+    },
+    onDragAddSingle: function onDragAddSingle(evt) {
       var element = evt.item._underlying_vm_;
 
       if (element === undefined) {
@@ -2365,6 +2839,63 @@ var draggableComponent = {
       });
     },
     onDragRemove: function onDragRemove(evt) {
+      if (Array.isArray(evt.items) && evt.items.length) {
+        this.onDragRemoveMulti(evt);
+      } else {
+        this.onDragRemoveSingle(evt);
+      }
+    },
+    onDragRemoveMulti: function onDragRemoveMulti(evt) {
+      var _this7 = this;
+
+      // for match item index and element index
+      var headerSize = (this.$slots.header || []).length || 0; // sort old indicies
+      // - "order by index asc" for prevent Node.insertBefore side effect
+
+      var items = evt.oldIndicies.sort(function (_ref6, _ref7) {
+        var a = _ref6.index;
+        var b = _ref7.index;
+        return a - b;
+      }); // restore nodes
+
+      items.forEach(function (_ref8) {
+        var item = _ref8.multiDragElement,
+            index = _ref8.index;
+        Object(helper["c" /* insertNodeAt */])(_this7.rootContainer, item, index);
+
+        if (item.parentNode) {
+          external_commonjs_sortablejs_commonjs2_sortablejs_amd_sortablejs_root_Sortable_default.a.utils.deselect(item);
+        }
+      }); // if clone
+
+      if (evt.pullMode === "clone") {
+        Object(helper["d" /* removeNode */])(evt.clone);
+        return;
+      } // remove items and reset transition data
+      // - "order by index desc" (call reverse()) for prevent Array.splice side effect
+
+
+      var indiciesToRemove = getIndiciesToRemove(items, headerSize);
+      indiciesToRemove.forEach(function (oldIndex) {
+        return _this7.resetTransitionData(oldIndex);
+      });
+      this.removeAllFromList(indiciesToRemove); // emit change
+
+      var removed = indiciesToRemove.sort().map(function (oldIndex) {
+        var context = _this7.multidragContexts.find(function (e) {
+          return e.index === oldIndex;
+        });
+
+        return {
+          element: context.element,
+          oldIndex: oldIndex
+        };
+      });
+      this.emitChanges({
+        removed: removed
+      });
+    },
+    onDragRemoveSingle: function onDragRemoveSingle(evt) {
       Object(helper["c" /* insertNodeAt */])(this.rootContainer, evt.item, evt.oldIndex);
 
       if (evt.pullMode === "clone") {
@@ -2384,6 +2915,59 @@ var draggableComponent = {
       });
     },
     onDragUpdate: function onDragUpdate(evt) {
+      if (Array.isArray(evt.items) && evt.items.length) {
+        if (!evt.pullMode) this.onDragUpdateMulti(evt);
+      } else {
+        this.onDragUpdateSingle(evt);
+      }
+    },
+    onDragUpdateMulti: function onDragUpdateMulti(evt) {
+      var _this8 = this;
+
+      var items = evt.items,
+          from = evt.from; // for match item index and element index
+
+      var headerSize = (this.$slots.header || []).length || 0; // remove nodes
+
+      items.forEach(function (item) {
+        return Object(helper["d" /* removeNode */])(item);
+      }); // sort items
+      // note: "order by oldIndex asc" for prevent Node.insertBefore side effect
+
+      var itemsWithIndex = Array.from(evt.oldIndicies).sort(function (_ref9, _ref10) {
+        var a = _ref9.index;
+        var b = _ref10.index;
+        return a - b;
+      }); // insert nodes
+
+      itemsWithIndex.forEach(function (e) {
+        return Object(helper["c" /* insertNodeAt */])(from, e.multiDragElement, e.index);
+      }); // move items
+
+      var oldIndicies = itemsWithIndex.map(function (_ref11) {
+        var index = _ref11.index;
+        return index - headerSize;
+      });
+      var newIndex = this.getVmIndex(evt.newIndex); // note: Array.from = prevent sort change side effect
+
+      this.updatePositions(Array.from(oldIndicies), newIndex); // emit change
+
+      var moved = oldIndicies.map(function (oldIndex, index) {
+        var context = _this8.multidragContexts.find(function (e) {
+          return e.index === oldIndex;
+        });
+
+        return {
+          element: context.element,
+          oldIndex: oldIndex,
+          newIndex: newIndex + index
+        };
+      });
+      this.emitChanges({
+        moved: moved
+      });
+    },
+    onDragUpdateSingle: function onDragUpdateSingle(evt) {
       Object(helper["d" /* removeNode */])(evt.item);
       Object(helper["c" /* insertNodeAt */])(evt.from, evt.item, evt.oldIndex);
       var oldIndex = this.context.index;
